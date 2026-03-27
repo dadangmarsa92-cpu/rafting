@@ -86,6 +86,15 @@ const app = {
         });
     },
 
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if(sidebar && overlay) {
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('active');
+        }
+    },
+
     navigate(viewId) {
         // Update Nav Active State
         document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
@@ -102,6 +111,14 @@ const app = {
 
         // Show selected view
         document.getElementById(`view-${viewId}`).classList.add('active');
+
+        // Close mobile sidebar if open
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        if(sidebar && sidebar.classList.contains('show')) {
+            sidebar.classList.remove('show');
+            if(overlay) overlay.classList.remove('active');
+        }
 
         // Trigger updates depending on view
         if (viewId === 'dashboard') {
