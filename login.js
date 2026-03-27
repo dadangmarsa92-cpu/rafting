@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('password').value;
 
         // Simple hardcoded check
-        if (username === 'admin' && password === 'admin123') {
+        if (username === 'nunungsp' && password === '123456') {
             // Setup simple token
             localStorage.setItem('rafting_auth_token', 'true');
             // Redirect to dashboard
