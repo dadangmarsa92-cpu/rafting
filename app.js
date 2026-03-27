@@ -1,9 +1,6 @@
 /* app.js */
 
-// Import Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-
+// Import Firebase (Compat dipanggil dari index.html)
 const firebaseConfig = {
   apiKey: "AIzaSyDarXUqrsWec0ENj6KsXPu4-frpnSrJJB0",
   authDomain: "rafting-277b7.firebaseapp.com",
@@ -13,8 +10,8 @@ const firebaseConfig = {
   appId: "1:81570278149:web:a61618d2487155af9ea56c"
 };
 
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
+const firebaseApp = firebase.initializeApp(firebaseConfig);
+const db = firebaseApp.firestore();
 
 const STORAGE_KEY = 'rafting_bookings';
 
@@ -24,7 +21,7 @@ const app = {
     chartInstance: null,
     currentDate: new Date(),
     
-    init() {
+    async init() {
         if (localStorage.getItem('rafting_auth_token') !== 'true') {
             window.location.href = 'login.html';
             return;
@@ -37,11 +34,14 @@ const app = {
             if (menuUsers) menuUsers.style.display = 'flex';
         }
 
-        this.loadData();
         this.setupNavigation();
+        this.initStatusBar();
+        
+        // Load bookings first before rendering charts
+        await this.loadData();
+        
         this.renderDashboard();
         this.initChart();
-        this.initStatusBar();
         
         // Setup Search
         const searchInput = document.querySelector('.search-bar input');
@@ -52,49 +52,46 @@ const app = {
         }
     },
 
-    loadData() {
-        const indoNames = ["Budi Santoso", "Siti Aminah", "Agus Setiawan", "Ayu Lestari", "Hendra Wijaya", "Indah Permatasari", "Eko Prasetyo", "Dewi Sartika", "Rizky Pratama", "Fitriani", "Reza Kurniawan", "Nurul Hidayah", "Dedi Saputra", "Rina Marlina", "Andi Syahputra", "Putri Rahayu", "Gilang Ramadhan", "Nisa Kamilia", "Fajar Siddiq", "Ririn Ekawati", "Tono Suharto", "Wulan Rahmawati", "Iwan Kusuma", "Maya Septha", "Dian Sastro"];
-        
-        const data = localStorage.getItem(STORAGE_KEY);
-        if (data && JSON.parse(data).length >= 10) {
-            this.bookings = JSON.parse(data);
-            
-            // Migrate old "Tamu X" names to Indonesian names
-            let migrated = false;
-            this.bookings.forEach(b => {
-                if (b.name && b.name.startsWith("Tamu ")) {
-                    b.name = indoNames[Math.floor(Math.random() * indoNames.length)];
-                    migrated = true;
-                }
-            });
-            if (migrated) this.saveToStorage();
-        } else {
-            // Mock data for initial empty state
-            const today = new Date();
+    async loadData() {
+        try {
+            const querySnapshot = await db.collection("bookings").get();
             this.bookings = [];
-            for (let i = 0; i < 60; i++) {
-                const d = new Date();
-                d.setDate(today.getDate() - i);
-                const dateStr = d.toISOString().split('T')[0];
-                const boatsCount = Math.floor(Math.random() * 5) + 1;
-                this.bookings.push({
-                    id: Date.now() - i,
-                    name: indoNames[Math.floor(Math.random() * indoNames.length)],
-                    phone: "08123456" + i,
-                    date: dateStr,
-                    session: i % 2 === 0 ? "Pagi (08:30)" : "Siang (13:00)",
-                    boats: boatsCount,
-                    price: 750000,
-                    total: boatsCount * 750000,
-                    status: i % 3 === 0 ? "DP" : "Lunas"
+            
+            if (querySnapshot.empty) {
+                // Migrate dummy data
+                const localData = localStorage.getItem(STORAGE_KEY);
+                if (localData) {
+                    const parsedData = JSON.parse(localData);
+                    if (parsedData.length > 0) {
+                        const batch = db.batch();
+                        parsedData.forEach(item => {
+                            const newDocRef = db.collection("bookings").doc();
+                            const itemToUpload = { ...item };
+                            delete itemToUpload.id; 
+                            batch.set(newDocRef, itemToUpload);
+                        });
+                        await batch.commit();
+                        
+                        // Clear local storage after successful migration
+                        localStorage.removeItem(STORAGE_KEY);
+                        
+                        // Reload from firestore
+                        return this.loadData();
+                    }
+                }
+            } else {
+                querySnapshot.forEach((doc) => {
+                    this.bookings.push({ id: doc.id, ...doc.data() });
                 });
             }
-            this.saveToStorage();
+        } catch (error) {
+            console.error("Error loading bookings from Firebase:", error);
+            alert("Gagal memuat data dari database. Pastikan koneksi internet Anda stabil.");
         }
     },
 
     saveToStorage() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.bookings));
+        // Obsolete function, retained temporarily to prevent undefined errors in case of edge cases.
     },
 
     setupNavigation() {
@@ -197,7 +194,7 @@ const app = {
         return `<span class="${className}">${status}</span>`;
     },
 
-    saveBooking(e) {
+    async saveBooking(e) {
         e.preventDefault();
         
         const idInput = document.getElementById('booking-id').value;
@@ -206,7 +203,6 @@ const app = {
         const price = parseInt(priceStr.replace(/\D/g, '')) || 0;
 
         const newBooking = {
-            id: idInput ? parseInt(idInput) : Date.now(),
             name: document.getElementById('b-name').value,
             phone: document.getElementById('b-phone').value,
             date: document.getElementById('b-date').value,
@@ -217,23 +213,32 @@ const app = {
             status: document.getElementById('b-status').value
         };
 
-        if(idInput) {
-            // Edit
-            const index = this.bookings.findIndex(b => b.id == idInput);
-            if(index !== -1) this.bookings[index] = newBooking;
-        } else {
-            // Create
-            this.bookings.push(newBooking);
-        }
+        try {
+            let finalId = idInput;
+            if(idInput) {
+                // Edit
+                await db.collection("bookings").doc(idInput).update(newBooking);
+            } else {
+                // Create
+                const docRef = await db.collection("bookings").add(newBooking);
+                finalId = docRef.id;
+            }
+            
+            newBooking.id = finalId; // Attach ID for receipt printing
 
-        this.saveToStorage();
-        this.navigate('bookings');
-        
-        // Cek jika butuh cetak struk
-        if (confirm(idInput ? 'Pembaruan tersimpan! Ingin cetak struk untuk pesanan ini?' : 'Pesanan baru tersimpan! Ingin cetak struk sekarang?')) {
-            this.printReceipt(newBooking);
-        } else {
-            this.renderDashboard();
+            await this.loadData();
+            this.navigate('bookings');
+            
+            // Cek jika butuh cetak struk
+            if (confirm(idInput ? 'Pembaruan tersimpan! Ingin cetak struk untuk pesanan ini?' : 'Pesanan baru tersimpan! Ingin cetak struk sekarang?')) {
+                this.printReceipt(newBooking);
+            } else {
+                this.renderDashboard();
+                this.updateChart();
+            }
+        } catch (error) {
+            console.error("Gagal menyimpan booking", error);
+            alert("Gagal menyimpan data pesanan.");
         }
     },
 
@@ -269,12 +274,18 @@ const app = {
         document.querySelector('#view-new-booking h2').innerText = 'Edit Booking';
     },
 
-    deleteBooking(id) {
+    async deleteBooking(id) {
         if(confirm('Apakah Anda yakin ingin menghapus data booking ini?')) {
-            this.bookings = this.bookings.filter(b => b.id !== id);
-            this.saveToStorage();
-            this.renderBookingsList();
-            this.renderDashboard();
+            try {
+                await db.collection("bookings").doc(id).delete();
+                await this.loadData();
+                this.renderBookingsList();
+                this.renderDashboard();
+                this.updateChart();
+            } catch (error) {
+                console.error("Gagal menghapus booking", error);
+                alert("Gagal menghapus data dari database.");
+            }
         }
     },
 
@@ -349,8 +360,8 @@ const app = {
                 <td>${this.getStatusBadge(b.status)}</td>
                 <td>
                     <div class="action-links">
-                        <button class="btn-edit" onclick="app.editBooking(${b.id})" title="Edit"><i class="ri-edit-line"></i></button>
-                        <button class="btn-delete" onclick="app.deleteBooking(${b.id})" title="Hapus"><i class="ri-delete-bin-line"></i></button>
+                        <button class="btn-edit" onclick="app.editBooking('${b.id}')" title="Edit"><i class="ri-edit-line"></i></button>
+                        <button class="btn-delete" onclick="app.deleteBooking('${b.id}')" title="Hapus"><i class="ri-delete-bin-line"></i></button>
                     </div>
                 </td>
             `;
@@ -790,7 +801,7 @@ const app = {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>';
         
         try {
-            const querySnapshot = await getDocs(collection(db, "users"));
+            const querySnapshot = await db.collection("users").get();
             this.users = [];
             querySnapshot.forEach((docSnap) => {
                 this.users.push({ id: docSnap.id, ...docSnap.data() });
@@ -840,10 +851,9 @@ const app = {
 
         try {
             if (id) {
-                const userRef = doc(db, "users", id);
-                await updateDoc(userRef, userData);
+                await db.collection("users").doc(id).update(userData);
             } else {
-                await addDoc(collection(db, "users"), userData);
+                await db.collection("users").add(userData);
             }
             this.resetUserForm();
             this.renderUsers();
@@ -886,7 +896,7 @@ const app = {
 
         if(confirm(`Yakin ingin menghapus pengguna "${username}"?`)) {
             try {
-                await deleteDoc(doc(db, "users", id));
+                await db.collection("users").doc(id).delete();
                 this.renderUsers();
             } catch (error) {
                 console.error("Error deleting", error);

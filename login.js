@@ -1,9 +1,5 @@
 // login.js
 
-// Import Firebase libraries from CDN
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDarXUqrsWec0ENj6KsXPu4-frpnSrJJB0",
@@ -16,8 +12,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 document.addEventListener('DOMContentLoaded', () => {
     // Redirect if already logged in
@@ -64,9 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Query Firestore database
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("username", "==", username));
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await db.collection("users").where("username", "==", username).get();
 
             let validUser = false;
 
