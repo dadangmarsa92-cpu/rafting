@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Booking Rafting</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="logo.png" style="width: 32px; height: 32px; margin-right: 10px; border-radius: 6px; object-fit: cover;">
+                <span>CitraElo</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-view="dashboard">
+                    <i class="ri-dashboard-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-view="calendar">
+                    <i class="ri-calendar-todo-line"></i>
+                    <span>Kalender</span>
+                </a>
+                <a href="#" class="nav-item" data-view="bookings">
+                    <i class="ri-list-check-3"></i>
+                    <span>Daftar Booking</span>
+                </a>
+                <a href="#" class="nav-item" data-view="finance">
+                    <i class="ri-wallet-3-line"></i>
+                    <span>Keuangan</span>
+                </a>
+                <a href="#" class="nav-item" data-view="new-booking">
+                    <i class="ri-file-add-line"></i>
+                    <span>Tambah Booking</span>
+                </a>
+                <a href="#" class="nav-item" data-view="reports">
+                    <i class="ri-file-chart-line"></i>
+                    <span>Laporan</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item user-profile" style="margin-bottom: 5px;">
+                    <i class="ri-user-smile-line"></i>
+                    <span>Admin</span>
+                </a>
+                <a href="#" class="nav-item text-danger" onclick="app.logout()" style="color: var(--danger);">
+                    <i class="ri-logout-box-r-line"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar">
+                    <i class="ri-search-line"></i>
+                    <input type="text" placeholder="Cari nama atau kode booking...">
+                </div>
+                <div class="topbar-actions">
+                    <button class="action-btn"><i class="ri-notification-3-line"></i></button>
+                    <button class="add-btn" onclick="app.navigate('new-booking')">
+                        <i class="ri-add-line"></i> Booking Baru
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Dashboard View -->
+                <section id="view-dashboard" class="view active">
+                    <div class="view-header">
+                        <h2>Halo, Admin! 👋</h2>
+                        <p>Berikut adalah ringkasan hari ini.</p>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(10, 153, 255, 0.1); color: #0a99ff;">
+                                <i class="ri-sailboat-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Perahu Keluar</h3>
+                                <p id="stat-boats">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(0, 203, 106, 0.1); color: #00cb6a;">
+                                <i class="ri-group-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Peserta</h3>
+                                <p id="stat-guests">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(135, 96, 251, 0.1); color: #8760fb;">
+                                <i class="ri-calendar-check-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Booking Hari Ini</h3>
+                                <p id="stat-today">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Panel -->
+                    <div class="panel" style="margin-bottom: 2rem;">
+                        <div class="panel-header flex-between">
+                            <h3>Statistik Jumlah Perahu</h3>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="chart-type" class="small-select" onchange="app.updateChart()">
+                                    <option value="bar">Grafik Batang (Bar)</option>
+                                    <option value="line">Grafik Garis (Line)</option>
+                                </select>
+                                <select id="chart-range" class="small-select" onchange="app.updateChart()">
+                                    <option value="daily">Harian (7 Hari Terakhir)</option>
+                                    <option value="weekly">Mingguan (4 Minggu Terakhir)</option>
+                                    <option value="monthly">Bulanan (Tahun Ini)</option>
+                                    <option value="yearly">Tahunan</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="padding: 1.5rem; height: 350px;">
+                            <canvas id="boatsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Bookings Table -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3>Booking Terbaru</h3>
+                            <button class="link-btn" onclick="app.navigate('bookings')">Lihat Semua</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>Tanggal</th>
+                                        <th>Sesi</th>
+                                        <th>Perahu</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-recent-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendar View -->
+                <section id="view-calendar" class="view">
+                    <div class="view-header flex-between">
+                        <div>
+                            <h2>Kalender Pemesanan</h2>
+                            <p>Sorot tanggal yang memiliki titik untuk melihat rincian pemesanan.</p>
+                        </div>
+                        <div class="calendar-controls" style="display: flex; align-items: center;">
+                            <button class="action-btn" onclick="app.prevMonth()"><i class="ri-arrow-left-s-line"></i></button>
+                            <h3 id="cal-month-year" style="margin: 0 15px; min-width: 150px; text-align: center; color: var(--dark);">Bulan Tahun</h3>
+                            <button class="action-btn" onclick="app.nextMonth()"><i class="ri-arrow-right-s-line"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel" style="padding: 1.5rem; overflow: visible;">
+                        <div class="calendar-container">
+                            <div class="calendar-days">
+                                <div>Minggu</div><div>Senin</div><div>Selasa</div><div>Rabu</div><div>Kamis</div><div>Jumat</div><div>Sabtu</div>
+                            </div>
+                            <div id="calendar-grid" class="calendar-grid">
+                                <!-- Dates injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bookings List View -->
+                <section id="view-bookings" class="view">
+                    <div class="view-header flex-between">
+                        <div>
+                            <h2>Daftar Booking</h2>
+                            <p>Kelola semua pemesanan rafting Anda.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Nama Pemesan</th>
+                                        <th>No HP</th>
+                                        <th>Tanggal</th>
+                                        <th>Sesi Trip</th>
+                                        <th>Jml Perahu</th>
+                                        <th>Total Pembayaran</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bookings-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- New Booking View -->
+                <section id="view-new-booking" class="view">
+                    <div class="view-header">
+                        <h2>Tambah/Edit Booking</h2>
+                        <p>Masukkan data klien yang baru memesan.</p>
+                    </div>
+
+                    <div class="panel">
+                        <form id="booking-form" onsubmit="app.saveBooking(event)">
+                            <input type="hidden" id="booking-id">
+                            
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Nama Pemesan</label>
+                                    <input type="text" id="b-name" required placeholder="Masukkan nama lengkap">
+                                </div>
+                                <div class="form-group">
+                                    <label>No. Handphone (WhatsApp)</label>
+                                    <input type="text" id="b-phone" required placeholder="Mis. 08123456789">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Tanggal Rafting</label>
+                                    <input type="date" id="b-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Sesi Trip</label>
+                                    <select id="b-session" required>
+                                        <option value="Pagi (08:30)">Pagi (08:30)</option>
+                                        <option value="Siang (13:00)">Siang (13:00)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Jumlah Perahu (Maks 4 orang/perahu)</label>
+                                    <input type="number" id="b-boats" min="1" required placeholder="1" oninput="app.calculateTotal()">
+                                </div>
+                                <div class="form-group">
+                                    <label>Harga per Perahu (Rp)</label>
+                                    <input type="text" id="b-price" required value="750.000" oninput="app.formatPriceInput(this); app.calculateTotal()">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Total Pembayaran (Otomatis)</label>
+                                    <input type="text" id="b-total" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Status Pembayaran</label>
+                                    <select id="b-status" required>
+                                        <option value="DP">DP (Down Payment)</option>
+                                        <option value="Lunas">Lunas</option>
+                                        <option value="Belum Bayar">Belum Bayar</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="cancel-btn" onclick="app.navigate('bookings')">Batal</button>
+                                <button type="submit" class="save-btn"><i class="ri-save-line"></i> Simpan Data</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Finance View -->
+                <section id="view-finance" class="view">
+                    <div class="view-header flex-between">
+                        <div>
+                            <h2>Laporan Keuangan</h2>
+                            <p>Ringkasan Pemasukan (Status: Lunas & DP)</p>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-stats" style="margin-bottom: 2rem;">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                                <i class="ri-money-dollar-circle-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Pemasukan Hari Ini</h3>
+                                <p id="fin-today" style="font-size: 1.2rem;">Rp 0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(10, 153, 255, 0.1); color: var(--primary);">
+                                <i class="ri-calendar-2-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Minggu Ini</h3>
+                                <p id="fin-week" style="font-size: 1.2rem;">Rp 0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                <i class="ri-calendar-event-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Bulan Ini</h3>
+                                <p id="fin-month" style="font-size: 1.2rem;">Rp 0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                <i class="ri-bank-line"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Tahun Ini</h3>
+                                <p id="fin-year" style="font-size: 1.2rem;">Rp 0</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Reports View -->
+                <section id="view-reports" class="view">
+                    <div class="view-header flex-between">
+                        <div>
+                            <h2>Laporan Manajemen</h2>
+                            <p>Ringkasan operasional dan finansial terpadu.</p>
+                        </div>
+                        <div class="action-buttons" style="display: flex; gap: 10px;">
+                            <button class="export-btn" onclick="app.exportExcel()" style="background: var(--success); color: white; border: none; padding: 10px 15px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <i class="ri-file-excel-2-line"></i> Ekspor CSV
+                            </button>
+                            <button class="print-btn" onclick="app.printReport()" style="background: var(--primary); color: white; border: none; padding: 10px 15px; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <i class="ri-printer-line"></i> Cetak A4 / PDF
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel" id="report-print-container">
+                        <div style="text-align: center; margin-bottom: 20px; display: none;" class="print-header-only">
+                            <h2>Laporan Operasional & Keuangan</h2>
+                            <h3>CITRAELO RAFTING</h3>
+                            <p style="color: #666;">Dicetak pada: <span id="report-print-time"></span></p>
+                            <hr style="margin-top:10px; border: 0; border-top: 1px solid #ddd;">
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Periode</th>
+                                        <th>Total Kapal (Unit)</th>
+                                        <th>Rincian Sesi Trip</th>
+                                        <th>Uang Masuk Bersih</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reports-tbody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Thermal Receipt Skeleton -->
+    <div id="thermal-receipt" class="print-only">
+        <div class="receipt-header">
+            <img src="logo.png" alt="CitraElo Logo">
+            <h2>CITRAELO RAFTING</h2>
+            <p>Jalan Sungai Citraelo No.12<br>Telp: 0812-3456-7890</p>
+            <div class="divider"></div>
+        </div>
+        
+        <div class="receipt-details">
+            <p><strong>Tanggal:</strong> <span id="r-date"></span></p>
+            <p><strong>Kasir:</strong> Admin</p>
+            <p><strong>ID Pesanan:</strong> <span id="r-id"></span></p>
+            <div class="divider"></div>
+            
+            <p><strong>Pemesan:</strong> <span id="r-name"></span></p>
+            <p><strong>Sesi:</strong> <span id="r-session"></span></p>
+            <p><strong>Jml Perahu:</strong> <span id="r-boats"></span></p>
+            
+            <div class="divider"></div>
+            <div class="receipt-total">
+                <span>TOTAL</span>
+                <span id="r-total"></span>
+            </div>
+            <p><strong>Status:</strong> <span id="r-status" style="text-transform: uppercase;"></span></p>
+            <div class="divider"></div>
+        </div>
+        
+        <div class="receipt-footer">
+            <p>Terima Kasih!</p>
+            <p>Selamat Berpetualang</p>
+            <br>
+            <p style="font-size: 0.7em;">--- Harap simpan struk ini ---</p>
+        </div>
+    </div>
+    
+    <!-- Realtime Status Bar -->
+    <div class="status-bar print-only-hide" id="status-bar">
+        <div class="status-left">
+            <i class="ri-user-smile-line"></i> Admin CitraElo | <span id="status-login-time" style="margin-left:5px"></span>
+        </div>
+        <div class="status-center" id="status-duration">
+            <i class="ri-timer-line"></i> 00:00:00
+        </div>
+        <div class="status-right">
+            <i class="ri-time-line"></i> <span id="status-clock">00:00:00</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
