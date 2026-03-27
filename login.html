@@ -38,7 +38,22 @@
                     <label>Password</label>
                     <div class="input-with-icon">
                         <i class="ri-lock-line"></i>
-                        <input type="password" id="password" placeholder="Masukkan password" required>
+                        <input type="password" id="password" placeholder="Masukkan password" required style="padding-right: 2.8rem;">
+                        <i class="ri-eye-off-line" id="togglePassword" style="left: auto; right: 1rem; cursor: pointer;"></i>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <label>Hak Akses</label>
+                    <div class="input-with-icon">
+                        <i class="ri-shield-user-line"></i>
+                        <select id="role" required style="width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; background: rgba(255, 255, 255, 0.8); border: none; font-size: 0.95rem; color: var(--dark); border-radius: var(--radius-sm); outline: none; appearance: none; cursor: pointer;">
+                            <option value="" disabled selected>Pilih Hak Akses</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Keuangan">Keuangan</option>
+                            <option value="Super User">Super User</option>
+                        </select>
+                        <i class="ri-arrow-down-s-line" style="left: auto; right: 1rem; pointer-events: none;"></i>
                     </div>
                 </div>
                 
@@ -57,6 +72,6 @@
         </div>
     </div>
 
-    <script src="login.js"></script>
+    <script type="module" src="login.js"></script>
 </body>
 </html>

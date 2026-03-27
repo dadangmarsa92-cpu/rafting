@@ -1,9 +1,26 @@
 /* app.js */
 
+// Import Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDarXUqrsWec0ENj6KsXPu4-frpnSrJJB0",
+  authDomain: "rafting-277b7.firebaseapp.com",
+  projectId: "rafting-277b7",
+  storageBucket: "rafting-277b7.firebasestorage.app",
+  messagingSenderId: "81570278149",
+  appId: "1:81570278149:web:a61618d2487155af9ea56c"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
 const STORAGE_KEY = 'rafting_bookings';
 
 const app = {
     bookings: [],
+    users: [],
     chartInstance: null,
     currentDate: new Date(),
     
@@ -11,6 +28,13 @@ const app = {
         if (localStorage.getItem('rafting_auth_token') !== 'true') {
             window.location.href = 'login.html';
             return;
+        }
+
+        // Tampilkan menu Admin
+        const role = localStorage.getItem('rafting_user_role');
+        if (role === 'Admin' || role === 'Super User') {
+            const menuUsers = document.getElementById('menu-users');
+            if (menuUsers) menuUsers.style.display = 'flex';
         }
 
         this.loadData();
@@ -123,6 +147,8 @@ const app = {
         // Trigger updates depending on view
         if (viewId === 'dashboard') {
             this.renderDashboard();
+        } else if (viewId === 'users') {
+            this.renderUsers();
         } else if (viewId === 'calendar') {
             this.renderCalendar();
         } else if (viewId === 'finance') {
@@ -759,6 +785,116 @@ const app = {
         }, 500); // delay to allow print dialog rendering
     },
 
+    async renderUsers() {
+        const tbody = document.getElementById('users-tbody');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>';
+        
+        try {
+            const querySnapshot = await getDocs(collection(db, "users"));
+            this.users = [];
+            querySnapshot.forEach((docSnap) => {
+                this.users.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            tbody.innerHTML = '';
+            if(this.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Tidak ada data pengguna.</td></tr>';
+                return;
+            }
+
+            this.users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${u.username}</strong></td>
+                    <td>${u.password}</td>
+                    <td><span class="badge" style="background:#e2e8f0;color:#475569">${u.role}</span></td>
+                    <td>
+                        <div class="action-links">
+                            <button class="btn-edit" onclick="app.editUser('${u.id}')" title="Edit"><i class="ri-edit-line"></i></button>
+                            <button class="btn-delete" onclick="app.deleteUser('${u.id}', '${u.username}')" title="Hapus"><i class="ri-delete-bin-line"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error("Error loading users", error);
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red;">Gagal memuat data dari database.</td></tr>';
+        }
+    },
+
+    async saveUser(e) {
+        e.preventDefault();
+        const id = document.getElementById('u-id').value;
+        const btn = document.getElementById('save-user-btn');
+        const origText = btn.innerHTML;
+        
+        const userData = {
+            username: document.getElementById('u-username').value,
+            password: document.getElementById('u-password').value,
+            role: document.getElementById('u-role').value
+        };
+
+        btn.innerHTML = 'Menyimpan...';
+        btn.disabled = true;
+
+        try {
+            if (id) {
+                const userRef = doc(db, "users", id);
+                await updateDoc(userRef, userData);
+            } else {
+                await addDoc(collection(db, "users"), userData);
+            }
+            this.resetUserForm();
+            this.renderUsers();
+            alert('Data pengguna berhasil disimpan!');
+        } catch (error) {
+            console.error("Error saving user", error);
+            alert('Gagal menyimpan data pengguna!');
+        } finally {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        }
+    },
+
+    editUser(id) {
+        const user = this.users.find(u => u.id === id);
+        if(!user) return;
+
+        document.getElementById('u-id').value = user.id;
+        document.getElementById('u-username').value = user.username;
+        document.getElementById('u-password').value = user.password;
+        document.getElementById('u-role').value = user.role;
+        
+        document.getElementById('user-form-title').innerText = 'Edit User: ' + user.username;
+        document.getElementById('cancel-user-btn').style.display = 'block';
+    },
+
+    resetUserForm() {
+        document.getElementById('user-form').reset();
+        document.getElementById('u-id').value = '';
+        document.getElementById('user-form-title').innerText = 'Tambah User Baru';
+        document.getElementById('cancel-user-btn').style.display = 'none';
+    },
+
+    async deleteUser(id, username) {
+        const currentUser = localStorage.getItem('rafting_username');
+        if (currentUser === username) {
+            alert('Anda tidak bisa menghapus akun Anda sendiri saat sedang login!');
+            return;
+        }
+
+        if(confirm(`Yakin ingin menghapus pengguna "${username}"?`)) {
+            try {
+                await deleteDoc(doc(db, "users", id));
+                this.renderUsers();
+            } catch (error) {
+                console.error("Error deleting", error);
+                alert('Gagal menghapus data!');
+            }
+        }
+    },
+
     logout() {
         if(confirm("Sesi Anda akan diakhiri. Apakah Anda yakin ingin keluar?")) {
             localStorage.removeItem('rafting_auth_token');
@@ -768,6 +904,7 @@ const app = {
 };
 
 // Initialize App Setup
+window.app = app;
 document.addEventListener('DOMContentLoaded', () => {
     app.init();
 });
